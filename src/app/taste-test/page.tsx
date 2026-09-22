@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { movies } from "@/data/movies";
 
 type Reaction = "nope" | "maybe" | "love";
@@ -11,6 +11,20 @@ export default function TasteTest() {
   const [finished, setFinished] = useState(false);
 
   const movie = movies[currentMovie];
+
+  // Load saved ratings when the page opens
+  useEffect(() => {
+    const savedRatings = localStorage.getItem("cinegeist-ratings");
+
+    if (savedRatings) {
+      setRatings(JSON.parse(savedRatings));
+    }
+  }, []);
+
+  // Save ratings whenever they change
+  useEffect(() => {
+    localStorage.setItem("cinegeist-ratings", JSON.stringify(ratings));
+  }, [ratings]);
 
   const handleReaction = (choice: Reaction) => {
     const updatedRatings = {
