@@ -1,79 +1,112 @@
 "use client";
-import { useState } from "react"; 
+
+import { useState } from "react";
+import { movies } from "@/data/movies";
+
 export default function TasteTest() {
+  const [currentMovie, setCurrentMovie] = useState(0);
   const [reaction, setReaction] = useState<string | null>(null);
 
+  const movie = movies[currentMovie];
+
+  const handleReaction = (choice: string) => {
+    setReaction(choice);
+
+    setTimeout(() => {
+      setReaction(null);
+
+      if (currentMovie < movies.length - 1) {
+        setCurrentMovie(currentMovie + 1);
+      }
+    }, 500);
+  };
+
   return (
-    <main className="min-h-screen bg-black text-white flex items-center justify-center px-6">
-      <div className="w-full max-w-2xl">
+    <main className="min-h-screen bg-black text-white px-6 py-12">
+      <div className="mx-auto max-w-2xl">
 
-        <p className="text-sm uppercase tracking-[0.3em] text-zinc-500 text-center">
-          Cinegeist
-        </p>
+        <div className="text-center">
+          <p className="text-sm uppercase tracking-[0.3em] text-zinc-500">
+            Cinegeist
+          </p>
 
-        <h1 className="mt-4 text-4xl font-semibold text-center">
-          Let's figure out your taste.
-        </h1>
+          <h1 className="mt-4 text-4xl font-semibold">
+            Let's figure out your taste.
+          </h1>
 
-        <p className="mt-3 text-zinc-500 text-center">
-          Tell us how you feel about these movies.
-        </p>
+          <p className="mt-3 text-zinc-500">
+            Tell us what you think about these movies.
+          </p>
+        </div>
 
-        <div className="mt-12 overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950">
+        <div className="mt-10 overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950">
 
-          <div className="h-96 bg-zinc-900 flex items-center justify-center">
-            <span className="text-zinc-600 text-lg">
-              Movie Poster
-            </span>
+          <div className="h-[500px] bg-zinc-900">
+            <img
+              src={movie.poster}
+              alt={movie.title}
+              className="h-full w-full object-cover"
+            />
           </div>
 
           <div className="p-8 text-center">
 
             <h2 className="text-3xl font-semibold">
-              Perfect Blue
+              {movie.title}
             </h2>
 
             <p className="mt-2 text-zinc-500">
-              1997 · Psychological · Animation
+              {movie.year}
             </p>
 
-            <p className="mt-6 text-zinc-400">
+            <p className="mx-auto mt-5 max-w-lg text-zinc-400">
+              {movie.description}
+            </p>
+
+            <p className="mt-7 text-zinc-500">
               How do you feel about this movie?
             </p>
 
-            <div className="mt-6 flex justify-center gap-3">
+            <div className="mt-5 flex justify-center gap-3">
 
-                <button
-                    onClick={() => setReaction("nope")}
-                    className="rounded-full border border-zinc-700 px-6 py-3 hover:bg-zinc-800 transition"
-                >
-                    Nope
-                </button>
-                <button
-                    onClick={() => setReaction("maybe")}
-                    className="rounded-full border border-zinc-700 px-6 py-3 hover:bg-zinc-800 transition"
-                >
-                    Maybe
-                </button>
-                <button
-                    onClick={() => setReaction("love")}
-                    className="rounded-full bg-white text-black px-6 py-3 hover:bg-zinc-200 transition"
-                >
-                    Love
-                </button>
-                {reaction && (
-                    <p className="mt-6 text-zinc-400">
-                        Your choice:{" "}
-                        <span className="text-white font-medium">
-                            {reaction}
-                        </span>
-                    </p>
-                )}
+              <button
+                onClick={() => handleReaction("nope")}
+                className="rounded-full border border-zinc-700 px-6 py-3 transition hover:bg-zinc-800"
+              >
+                Nope
+              </button>
+
+              <button
+                onClick={() => handleReaction("maybe")}
+                className="rounded-full border border-zinc-700 px-6 py-3 transition hover:bg-zinc-800"
+              >
+                Maybe
+              </button>
+
+              <button
+                onClick={() => handleReaction("love")}
+                className="rounded-full bg-white px-6 py-3 text-black transition hover:bg-zinc-200"
+              >
+                Love
+              </button>
+
             </div>
 
-          </div>
+            {reaction && (
+              <p className="mt-5 text-zinc-400">
+                You chose{" "}
+                <span className="font-medium text-white">
+                  {reaction}
+                </span>
+              </p>
+            )}
 
+          </div>
         </div>
+
+        <p className="mt-5 text-center text-sm text-zinc-600">
+          Movie {currentMovie + 1} of {movies.length}
+        </p>
 
       </div>
     </main>
