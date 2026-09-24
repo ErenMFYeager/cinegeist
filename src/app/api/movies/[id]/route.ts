@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getMovieDetails } from "@/lib/tmdb";
 
 type RouteContext = {
   params: Promise<{
@@ -10,15 +11,6 @@ export async function GET(
   request: NextRequest,
   context: RouteContext
 ) {
-  const token = process.env.TMDB_API_TOKEN;
-
-  if (!token) {
-    return NextResponse.json(
-      { error: "TMDB API token is missing" },
-      { status: 500 }
-    );
-  }
-
   const { id } = await context.params;
 
   if (!id || !/^\d+$/.test(id)) {
@@ -29,40 +21,7 @@ export async function GET(
   }
 
   try {
-    const url = new URL(
-      `https://api.themoviedb.org/3/movie/${id}`
-    );
-
-    url.searchParams.set(
-      "append_to_response",
-      "credits,keywords"
-    );
-
-    url.searchParams.set("language", "en-US");
-
-    const response = await fetch(url.toString(), {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/json",
-      },
-      cache: "no-store",
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-
-      return NextResponse.json(
-        {
-          error: "TMDB request failed",
-          status: response.status,
-          details: errorText,
-        },
-        { status: response.status }
-      );
-    }
-
-    const movie = await response.json();
+    const movie = await getMovieDetails(id);
 
     return NextResponse.json(movie);
   } catch (error) {
@@ -70,7 +29,7 @@ export async function GET(
 
     return NextResponse.json(
       {
-        error: "Could not connect to TMDB",
+        error: "Could not fetch movie details",
         details:
           error instanceof Error
             ? error.message
