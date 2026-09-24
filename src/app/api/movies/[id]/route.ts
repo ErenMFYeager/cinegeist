@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getMovieDetails } from "@/lib/tmdb";
+import { normalizeMovie } from "@/lib/movie/normalize";
 
 type RouteContext = {
   params: Promise<{
@@ -21,7 +22,9 @@ export async function GET(
   }
 
   try {
-    const movie = await getMovieDetails(id);
+    const rawMovie = await getMovieDetails(id);
+
+    const movie = normalizeMovie(rawMovie);
 
     return NextResponse.json(movie);
   } catch (error) {

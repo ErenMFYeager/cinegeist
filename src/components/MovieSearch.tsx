@@ -30,7 +30,7 @@ export default function MovieSearch() {
       const data = await response.json();
 
       if (!response.ok) {
-        console.error(data);
+        console.error("Movie search API error:", data);
         return;
       }
 

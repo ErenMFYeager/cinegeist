@@ -18,7 +18,7 @@ async function tmdbFetch(
     }
   }
 
-  const maxAttempts = 3;
+  const maxAttempts = 4;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
@@ -27,35 +27,18 @@ async function tmdbFetch(
         headers: {
           Authorization: `Bearer ${token}`,
           Accept: "application/json",
+          "User-Agent": "Cinegeist/1.0",
         },
         cache: "no-store",
       });
 
       if (!response.ok) {
-  const errorText = await response.text();
+        const errorText = await response.text();
 
-  // Don't retry permanent errors like 404.
-  if (response.status === 404) {
-    const error = new Error(
-      `TMDB resource not found (${response.status}): ${errorText}`
-    );
-
-    (error as Error & { status?: number }).status = 404;
-
-    throw error;
-  }
-
-  // Retry temporary/server-side failures.
-  if (response.status === 429 || response.status >= 500) {
-    throw new Error(
-      `TMDB temporary failure (${response.status}): ${errorText}`
-    );
-  }
-
-  throw new Error(
-    `TMDB request failed (${response.status}): ${errorText}`
-  );
-}
+        throw new Error(
+          `TMDB request failed (${response.status}): ${errorText}`
+        );
+      }
 
       return await response.json();
     } catch (error) {
@@ -68,9 +51,14 @@ async function tmdbFetch(
         throw error;
       }
 
-      // Small delay before retrying.
+      // Exponential backoff:
+      // 1st retry → 1 second
+      // 2nd retry → 2 seconds
+      // 3rd retry → 4 seconds
+      const delay = 1000 * 2 ** (attempt - 1);
+
       await new Promise((resolve) =>
-        setTimeout(resolve, 500 * attempt)
+        setTimeout(resolve, delay)
       );
     }
   }
