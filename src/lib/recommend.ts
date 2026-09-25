@@ -1,10 +1,5 @@
-import type {
-  CinegeistMovie,
-} from "@/lib/movie/types";
-
-import type {
-  StoredRating,
-} from "@/lib/db";
+import type { CinegeistMovie } from "@/lib/movie/types";
+import type { StoredRating } from "@/lib/db";
 
 type ScoredMovie = {
   movie: CinegeistMovie;
@@ -18,9 +13,7 @@ function intersection(
   b: string[]
 ): string[] {
   const bSet = new Set(
-    b.map((value) =>
-      value.toLowerCase()
-    )
+    b.map((value) => value.toLowerCase())
   );
 
   return a.filter((value) =>
@@ -43,7 +36,7 @@ function movieSimilarity(
   );
 
   const genreScore =
-    matchedGenres.length * 1;
+    matchedGenres.length;
 
   const keywordScore =
     matchedKeywords.length * 1.5;
@@ -85,7 +78,9 @@ export function recommendMovies(
   for (const candidate of candidates) {
     let totalScore = 0;
 
-    const allMatchedGenres = new Set<string>();
+    const allMatchedGenres =
+      new Set<string>();
+
     const allMatchedKeywords =
       new Set<string>();
 
@@ -98,11 +93,11 @@ export function recommendMovies(
       /*
        * Center ratings around 3.
        *
-       * 5 stars  → +2
-       * 4 stars  → +1
-       * 3 stars  →  0
-       * 2 stars  → -1
-       * 1 star   → -2
+       * 5 → +2
+       * 4 → +1
+       * 3 →  0
+       * 2 → -1
+       * 1 → -2
        */
       const preferenceWeight =
         userRating - 3;
@@ -122,21 +117,15 @@ export function recommendMovies(
         preferenceWeight;
 
       for (
-        const genre
-        of similarity.matchedGenres
+        const genre of similarity.matchedGenres
       ) {
-        allMatchedGenres.add(
-          genre
-        );
+        allMatchedGenres.add(genre);
       }
 
       for (
-        const keyword
-        of similarity.matchedKeywords
+        const keyword of similarity.matchedKeywords
       ) {
-        allMatchedKeywords.add(
-          keyword
-        );
+        allMatchedKeywords.add(keyword);
       }
     }
 
@@ -144,13 +133,9 @@ export function recommendMovies(
       movie: candidate,
       score: totalScore,
       matchedGenres:
-        Array.from(
-          allMatchedGenres
-        ),
+        Array.from(allMatchedGenres),
       matchedKeywords:
-        Array.from(
-          allMatchedKeywords
-        ),
+        Array.from(allMatchedKeywords),
     });
   }
 
