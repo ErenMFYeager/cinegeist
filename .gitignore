@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Cinegeist local database
+data/cinegeist.db
+data/cinegeist.db-wal
+data/cinegeist.db-shm

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getMovieDetails } from "@/lib/tmdb";
-import { normalizeMovie } from "@/lib/movie/normalize";
+import { getOrFetchMovie } from "@/lib/movie/cache";
 
 type RouteContext = {
   params: Promise<{
@@ -16,19 +15,26 @@ export async function GET(
 
   if (!id || !/^\d+$/.test(id)) {
     return NextResponse.json(
-      { error: "Invalid TMDB movie ID" },
-      { status: 400 }
+      {
+        error: "Invalid TMDB movie ID",
+      },
+      {
+        status: 400,
+      }
     );
   }
 
   try {
-    const rawMovie = await getMovieDetails(id);
-
-    const movie = normalizeMovie(rawMovie);
+    const movie = await getOrFetchMovie(
+      Number(id)
+    );
 
     return NextResponse.json(movie);
   } catch (error) {
-    console.error("TMDB movie details error:", error);
+    console.error(
+      "TMDB movie details error:",
+      error
+    );
 
     return NextResponse.json(
       {
@@ -38,7 +44,9 @@ export async function GET(
             ? error.message
             : "Unknown error",
       },
-      { status: 502 }
+      {
+        status: 502,
+      }
     );
   }
 }

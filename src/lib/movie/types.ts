@@ -37,3 +37,17 @@ export type CinegeistMovie = {
   rating: number;
   voteCount: number;
 };
+
+export type MovieFeatures = {
+  themes: string[];
+  tone: string[];
+  style: string[];
+  narrative: string[];
+
+  intensity: {
+    violence: number;
+    suspense: number;
+    emotional: number;
+    psychological: number;
+  };
+};

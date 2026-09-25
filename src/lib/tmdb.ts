@@ -81,3 +81,18 @@ export async function getMovieDetails(id: string) {
     language: "en-US",
   });
 }
+export async function discoverMovies(
+  page: number = 1
+) {
+  return tmdbFetch("/discover/movie", {
+    language: "en-US",
+    page: String(page),
+
+    include_adult: "false",
+    include_video: "false",
+
+    sort_by: "popularity.desc",
+
+    vote_count_gte: "100",
+  });
+}
