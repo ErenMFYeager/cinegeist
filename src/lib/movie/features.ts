@@ -4,15 +4,16 @@ import type {
   MovieFeatures,
 } from "./types";
 
-function text(movie: CinegeistMovie): string {
+function movieText(movie: CinegeistMovie): string {
   return [
     movie.title,
     movie.originalTitle,
     movie.overview,
-    movie.tagline ?? "",
+    movie.tagline,
     ...movie.genres,
     ...movie.keywords,
   ]
+    .filter(Boolean)
     .join(" ")
     .toLowerCase();
 }
@@ -22,548 +23,591 @@ function createFeature(
   evidence: string[]
 ): FeatureValue {
   return {
-    value: Math.max(
-      0,
-      Math.min(1, value)
-    ),
-    evidence,
+    value: Math.min(1, Math.max(0, Number(value.toFixed(2)))),
+    evidence: [...new Set(evidence)],
   };
 }
 
-function keywordMatches(
-  movie: CinegeistMovie,
+function findMatches(
+  text: string,
   terms: string[]
 ): string[] {
-  const keywords =
-    movie.keywords.map((keyword) =>
-      keyword.toLowerCase()
-    );
-
-  return keywords.filter((keyword) =>
-    terms.some((term) =>
-      keyword.includes(
-        term.toLowerCase()
-      )
-    )
-  );
-}
-
-function textMatches(
-  movie: CinegeistMovie,
-  terms: string[]
-): string[] {
-  const fullText = text(movie);
-
-  return terms.filter((term) =>
-    fullText.includes(
-      term.toLowerCase()
-    )
-  );
+  return terms.filter((term) => text.includes(term));
 }
 
 function inferFeature(
-  movie: CinegeistMovie,
+  text: string,
   terms: string[],
-  baseStrength = 0.65
+  options?: {
+    base?: number;
+    step?: number;
+    minimumEvidence?: number;
+  }
 ): FeatureValue {
-  const keywordEvidence =
-    keywordMatches(
-      movie,
-      terms
-    );
+  const matches = findMatches(text, terms);
 
-  const textEvidence =
-    textMatches(
-      movie,
-      terms
-    );
+  const base = options?.base ?? 0.65;
+  const step = options?.step ?? 0.08;
+  const minimumEvidence = options?.minimumEvidence ?? 1;
 
-  const evidence = Array.from(
-    new Set([
-      ...keywordEvidence,
-      ...textEvidence,
-    ])
-  );
-
-  if (evidence.length === 0) {
-    return createFeature(
-      0,
-      []
-    );
+  if (matches.length < minimumEvidence) {
+    return createFeature(0, []);
   }
 
-  const strength = Math.min(
-    1,
-    baseStrength +
-      (evidence.length - 1) *
-        0.08
-  );
-
   return createFeature(
-    strength,
-    evidence
+    base + (matches.length - 1) * step,
+    matches
   );
 }
 
 export function extractMovieFeatures(
   movie: CinegeistMovie
 ): MovieFeatures {
-  const genreText =
-    movie.genres
-      .map((genre) =>
-        genre.toLowerCase()
-      );
+  const text = movieText(movie);
 
-  const result: MovieFeatures = {
-    tone: {
-      dark: inferFeature(
-        movie,
-        [
-          "dark",
-          "darkness",
-          "bleak",
-          "grim",
-          "disturbing",
-        ]
-      ),
+  /*
+   * ------------------------------------------------------------
+   * TONE
+   * ------------------------------------------------------------
+   */
 
-      warm: inferFeature(
-        movie,
-        [
-          "warm",
-          "heartwarming",
-          "comforting",
-        ]
-      ),
+  const tone = {
+    dark: inferFeature(text, [
+      "dark",
+      "grim",
+      "bleak",
+      "darkness",
+      "dark secret",
+    ]),
 
-      melancholic: inferFeature(
-        movie,
-        [
-          "melancholy",
-          "melancholic",
-          "sadness",
-          "grief",
-          "loss",
-        ]
-      ),
+    warm: inferFeature(text, [
+      "warm",
+      "heartwarming",
+      "heart-warming",
+      "tender",
+    ]),
 
-      tense: inferFeature(
-        movie,
-        [
-          "tense",
-          "tension",
-          "suspense",
-          "thriller",
-        ]
-      ),
+    melancholic: inferFeature(text, [
+      "melancholy",
+      "melancholic",
+      "sadness",
+      "grief",
+      "loss",
+    ]),
 
-      unsettling: inferFeature(
-        movie,
-        [
-          "unsettling",
-          "disturbing",
-          "horror",
-          "nightmare",
-        ]
-      ),
+    tense: inferFeature(text, [
+      "tense",
+      "intense",
+      "thriller",
+      "suspenseful",
+      "suspense",
+    ]),
 
-      hopeful: inferFeature(
-        movie,
-        [
-          "hope",
-          "hopeful",
-          "optimistic",
-          "redemption",
-        ]
-      ),
+    unsettling: inferFeature(text, [
+      "unsettling",
+      "disturbing",
+      "psychological horror",
+      "nightmare",
+      "dread",
+    ]),
 
-      playful: inferFeature(
-        movie,
-        [
-          "playful",
-          "fun",
-          "comedy",
-          "humorous",
-        ]
-      ),
-    },
+    hopeful: inferFeature(text, [
+      "hopeful",
+      "hope",
+      "optimistic",
+      "redemption",
+    ]),
 
-    mood: {
-      atmospheric: inferFeature(
-        movie,
-        [
-          "atmospheric",
-          "atmosphere",
-          "mood",
-        ]
-      ),
-
-      intimate: inferFeature(
-        movie,
-        [
-          "intimate",
-          "personal",
-          "relationships",
-          "family",
-        ]
-      ),
-
-      dreamy: inferFeature(
-        movie,
-        [
-          "dream",
-          "dreams",
-          "dreamlike",
-          "surreal",
-        ]
-      ),
-
-      disturbing: inferFeature(
-        movie,
-        [
-          "disturbing",
-          "horror",
-          "nightmare",
-          "psychological horror",
-        ]
-      ),
-
-      comforting: inferFeature(
-        movie,
-        [
-          "comforting",
-          "heartwarming",
-          "feel-good",
-        ]
-      ),
-
-      mysterious: inferFeature(
-        movie,
-        [
-          "mystery",
-          "mysterious",
-          "investigation",
-          "unknown",
-        ]
-      ),
-
-      bleak: inferFeature(
-        movie,
-        [
-          "bleak",
-          "despair",
-          "nihilism",
-          "hopeless",
-        ]
-      ),
-    },
-
-    narrative: {
-      psychological: inferFeature(
-        movie,
-        [
-          "psychological",
-          "psychological thriller",
-          "subconscious",
-          "mind",
-          "identity",
-        ]
-      ),
-
-      character_driven: inferFeature(
-        movie,
-        [
-          "character study",
-          "character-driven",
-          "relationships",
-          "personal",
-          "family",
-        ]
-      ),
-
-      plot_driven: inferFeature(
-        movie,
-        [
-          "mission",
-          "investigation",
-          "heist",
-          "crime",
-          "conspiracy",
-        ]
-      ),
-
-      nonlinear: inferFeature(
-        movie,
-        [
-          "nonlinear",
-          "non-linear",
-          "time travel",
-          "flashback",
-          "memory",
-        ]
-      ),
-
-      slow_burn: inferFeature(
-        movie,
-        [
-          "slow burn",
-          "slow-burn",
-          "deliberate",
-          "gradual",
-        ]
-      ),
-
-      high_concept: inferFeature(
-        movie,
-        [
-          "high concept",
-          "dream world",
-          "time travel",
-          "alternate reality",
-          "parallel universe",
-        ]
-      ),
-
-      experimental: inferFeature(
-        movie,
-        [
-          "experimental",
-          "avant-garde",
-          "unconventional",
-          "surreal",
-        ]
-      ),
-    },
-
-    style: {
-      surreal: inferFeature(
-        movie,
-        [
-          "surreal",
-          "dream",
-          "dreamlike",
-          "absurd",
-        ]
-      ),
-
-      cerebral: inferFeature(
-        movie,
-        [
-          "intellectual",
-          "cerebral",
-          "philosophy",
-          "philosophical",
-          "ideas",
-        ]
-      ),
-
-      minimalist: inferFeature(
-        movie,
-        [
-          "minimalist",
-          "minimalism",
-          "sparse",
-        ]
-      ),
-
-      visually_stylized:
-        inferFeature(
-          movie,
-          [
-            "stylized",
-            "visual",
-            "surreal",
-            "artistic",
-          ]
-        ),
-
-      grounded: inferFeature(
-        movie,
-        [
-          "realistic",
-          "realism",
-          "grounded",
-          "real-life",
-        ]
-      ),
-
-      absurdist: inferFeature(
-        movie,
-        [
-          "absurd",
-          "absurdist",
-            "dark comedy",
-        ]
-      ),
-    },
-
-    emotional: {
-      emotional: inferFeature(
-        movie,
-        [
-          "emotional",
-          "emotion",
-          "love",
-          "grief",
-          "loss",
-          "family",
-        ]
-      ),
-
-      introspective: inferFeature(
-        movie,
-        [
-          "introspective",
-          "identity",
-          "self-discovery",
-          "memory",
-          "reflection",
-        ]
-      ),
-
-      bittersweet: inferFeature(
-        movie,
-        [
-          "bittersweet",
-          "melancholy",
-          "love",
-          "loss",
-          "nostalgia",
-        ]
-      ),
-
-      provocative: inferFeature(
-        movie,
-        [
-          "provocative",
-          "controversial",
-          "taboo",
-          "extreme",
-        ]
-      ),
-
-      existential: inferFeature(
-        movie,
-        [
-          "existential",
-          "existentialism",
-          "meaning of life",
-          "mortality",
-          "death",
-        ]
-      ),
-    },
-
-    intensity: {
-      violence: inferFeature(
-        movie,
-        [
-          "violence",
-          "violent",
-          "murder",
-          "gore",
-          "slasher",
-        ]
-      ),
-
-      suspense: inferFeature(
-        movie,
-        [
-          "thriller",
-          "suspense",
-          "tension",
-          "mystery",
-          "danger",
-        ]
-      ),
-
-      emotional: inferFeature(
-        movie,
-        [
-          "emotional",
-          "grief",
-          "loss",
-          "love",
-          "family",
-        ]
-      ),
-
-      psychological: inferFeature(
-        movie,
-        [
-          "psychological",
-          "mind",
-          "identity",
-          "subconscious",
-          "obsession",
-        ]
-      ),
-    },
+    playful: inferFeature(text, [
+      "playful",
+      "comedy",
+      "funny",
+      "humorous",
+      "satire",
+    ]),
   };
 
   /*
-   * Genre-specific boosts.
-   *
-   * These aren't absolute truths.
-   * They're only deterministic signals
-   * for our first semantic prototype.
+   * ------------------------------------------------------------
+   * MOOD
+   * ------------------------------------------------------------
    */
 
-  if (
-    genreText.includes("horror")
-  ) {
-    result.intensity.violence.value =
-      Math.max(
-        result.intensity.violence.value,
-        0.35
-      );
+  const mood = {
+    atmospheric: inferFeature(text, [
+      "atmospheric",
+      "haunting atmosphere",
+      "eerie atmosphere",
+      "dreamlike",
+    ]),
 
-    result.intensity.suspense.value =
-      Math.max(
-        result.intensity.suspense.value,
-        0.55
-      );
+    intimate: inferFeature(text, [
+      "intimate",
+      "personal",
+      "family relationships",
+      "close relationship",
+      "relationships",
+      "found family",
+    ]),
+
+    dreamy: inferFeature(text, [
+      "dream",
+      "dreams",
+      "dream world",
+      "dreamlike",
+      "surreal dream",
+    ]),
+
+    disturbing: inferFeature(text, [
+      "disturbing",
+      "disturbing imagery",
+      "psychological horror",
+      "extreme violence",
+      "nightmare",
+    ]),
+
+    comforting: inferFeature(text, [
+      "comforting",
+      "heartwarming",
+      "feel-good",
+      "feel good",
+      "uplifting",
+    ]),
+
+    mysterious: inferFeature(text, [
+      "mystery",
+      "mysterious",
+      "investigation",
+      "unknown",
+      "unsolved",
+    ]),
+
+    bleak: inferFeature(text, [
+      "bleak",
+      "hopeless",
+      "despair",
+      "nihilistic",
+    ]),
+  };
+
+  /*
+   * ------------------------------------------------------------
+   * NARRATIVE
+   * ------------------------------------------------------------
+   */
+
+  const narrative = {
+    psychological: inferFeature(text, [
+      "psychological thriller",
+      "psychological horror",
+      "psychological drama",
+      "psychological",
+    ]),
+
+    character_driven: inferFeature(text, [
+      "character study",
+      "character-driven",
+      "character driven",
+      "personal relationships",
+      "family relationships",
+      "identity crisis",
+    ]),
+
+    plot_driven: inferFeature(text, [
+      "mission",
+      "heist",
+      "investigation",
+      "conspiracy",
+      "crime",
+      "murder mystery",
+    ]),
+
+    nonlinear: inferFeature(text, [
+      "nonlinear",
+      "non-linear",
+      "flashback",
+      "fragmented narrative",
+      "multiple timelines",
+    ]),
+
+    slow_burn: inferFeature(text, [
+      "slow burn",
+      "slow-burn",
+      "gradual",
+      "deliberate pace",
+    ]),
+
+    high_concept: inferFeature(text, [
+      "high concept",
+      "high-concept",
+      "dream world",
+      "time travel",
+      "alternate reality",
+      "parallel universe",
+      "simulation",
+    ]),
+
+    experimental: inferFeature(text, [
+      "experimental",
+      "avant-garde",
+      "unconventional narrative",
+      "experimental film",
+    ]),
+  };
+
+  /*
+   * ------------------------------------------------------------
+   * STYLE
+   * ------------------------------------------------------------
+   */
+
+  const style = {
+    surreal: inferFeature(text, [
+      "surreal",
+      "surrealism",
+      "dream world",
+      "dreamlike",
+      "nightmarish",
+    ]),
+
+    cerebral: inferFeature(text, [
+      "intellectual",
+      "philosophical",
+      "cerebral",
+      "existential",
+    ]),
+
+    minimalist: inferFeature(text, [
+      "minimalist",
+      "minimalism",
+      "sparse",
+      "stripped-down",
+    ]),
+
+    visually_stylized: inferFeature(text, [
+      "visually stylized",
+      "stylized visuals",
+      "stylized",
+      "visual spectacle",
+      "aesthetic",
+    ]),
+
+    grounded: inferFeature(text, [
+      "social realism",
+      "realism",
+      "realistic",
+      "grounded",
+      "naturalistic",
+    ]),
+
+    absurdist: inferFeature(text, [
+      "absurdist",
+      "absurd",
+      "surreal comedy",
+      "dark comedy",
+    ]),
+  };
+
+  /*
+   * ------------------------------------------------------------
+   * EMOTIONAL
+   * ------------------------------------------------------------
+   */
+
+  const emotional = {
+    emotional: inferFeature(
+      text,
+      [
+        "heartbreaking",
+        "moving",
+        "emotionally",
+        "emotional journey",
+        "deeply emotional",
+      ],
+      {
+        minimumEvidence: 1,
+      }
+    ),
+
+    introspective: inferFeature(text, [
+      "introspective",
+      "self-reflection",
+      "identity crisis",
+      "inner conflict",
+      "self-discovery",
+    ]),
+
+    bittersweet: inferFeature(text, [
+      "bittersweet",
+      "bittersweet ending",
+      "love and loss",
+      "joy and sadness",
+    ]),
+
+    provocative: inferFeature(text, [
+      "provocative",
+      "controversial",
+      "taboo",
+      "transgressive",
+      "confrontational",
+    ]),
+
+    existential: inferFeature(text, [
+      "existential",
+      "existential crisis",
+      "existential emptiness",
+      "meaning of life",
+      "meaninglessness",
+      "nihilism",
+    ]),
+  };
+
+  /*
+   * ------------------------------------------------------------
+   * PSYCHOLOGICAL SUB-DIMENSIONS
+   *
+   * This is the important V3.1 change.
+   * "Psychological" alone is too broad.
+   * ------------------------------------------------------------
+   */
+
+  const psychological = {
+    identity: inferFeature(text, [
+      "identity crisis",
+      "new identity",
+      "identity theft",
+      "split personality",
+      "alter ego",
+      "secret identity",
+      "identity",
+    ]),
+
+    obsession: inferFeature(text, [
+      "obsession",
+      "obsessive",
+      "obsessed",
+      "fixation",
+    ]),
+
+    paranoia: inferFeature(text, [
+      "paranoia",
+      "paranoid",
+      "conspiracy",
+      "surveillance",
+      "persecution",
+    ]),
+
+    mental_deterioration: inferFeature(text, [
+      "psychological deterioration",
+      "mental breakdown",
+      "breakdown",
+      "losing his mind",
+      "losing her mind",
+      "descent into madness",
+    ]),
+
+    reality_distortion: inferFeature(text, [
+      "unreliable reality",
+      "distorted reality",
+      "reality distortion",
+      "hallucination",
+      "hallucinations",
+      "dream world",
+      "alternate reality",
+    ]),
+
+    introspection: inferFeature(text, [
+      "introspective",
+      "inner conflict",
+      "self-reflection",
+      "identity crisis",
+      "existential crisis",
+    ]),
+
+    existential: inferFeature(text, [
+      "existential",
+      "existential crisis",
+      "existential emptiness",
+      "meaninglessness",
+      "nihilism",
+    ]),
+  };
+
+  /*
+   * ------------------------------------------------------------
+   * HORROR SUB-DIMENSIONS
+   * ------------------------------------------------------------
+   */
+
+  const horror = {
+    atmospheric: inferFeature(text, [
+      "atmospheric horror",
+      "eerie atmosphere",
+      "haunting atmosphere",
+      "haunted",
+      "haunting",
+    ]),
+
+    psychological: inferFeature(text, [
+      "psychological horror",
+      "psychological terror",
+    ]),
+
+    found_footage: inferFeature(text, [
+      "found footage",
+      "found-footage",
+      "handheld footage",
+      "documentary style",
+    ]),
+
+    supernatural: inferFeature(text, [
+      "supernatural",
+      "ghost",
+      "ghosts",
+      "demon",
+      "demons",
+      "haunted house",
+      "possession",
+    ]),
+
+    body_horror: inferFeature(text, [
+      "body horror",
+      "body transformation",
+      "mutation",
+      "mutilation",
+      "grotesque transformation",
+    ]),
+
+    gore: inferFeature(text, [
+      "gore",
+      "gory",
+      "blood and gore",
+      "graphic violence",
+      "extreme violence",
+    ]),
+
+    disturbing: inferFeature(text, [
+      "disturbing",
+      "disturbing imagery",
+      "extreme",
+      "transgressive",
+      "shocking",
+    ]),
+
+    mystery_driven: inferFeature(text, [
+      "mystery",
+      "investigation",
+      "unsolved",
+      "unknown",
+    ]),
+  };
+
+  /*
+   * ------------------------------------------------------------
+   * INTENSITY
+   * ------------------------------------------------------------
+   */
+
+  const intensity = {
+    violence: inferFeature(text, [
+      "violence",
+      "violent",
+      "gun violence",
+      "gore",
+      "gory",
+      "graphic violence",
+      "murder",
+    ]),
+
+    suspense: inferFeature(text, [
+      "suspense",
+      "suspenseful",
+      "thriller",
+      "tension",
+      "tense",
+    ]),
+
+    emotional: inferFeature(text, [
+      "heartbreaking",
+      "moving",
+      "emotional journey",
+      "deeply emotional",
+      "grief",
+    ]),
+
+    psychological: inferFeature(text, [
+      "psychological thriller",
+      "psychological horror",
+      "psychological drama",
+      "psychological deterioration",
+      "mental breakdown",
+    ]),
+  };
+
+  /*
+   * ------------------------------------------------------------
+   * GENRE-LEVEL BOOSTS
+   *
+   * These are deliberately conservative.
+   * Genre alone should NOT create a huge semantic signal.
+   * ------------------------------------------------------------
+   */
+
+  const genres = new Set(
+    movie.genres.map((genre) => genre.toLowerCase())
+  );
+
+  if (genres.has("horror")) {
+    intensity.suspense = boostFeature(
+      intensity.suspense,
+      0.35,
+      "genre:horror"
+    );
   }
 
-  if (
-    genreText.includes("thriller")
-  ) {
-    result.intensity.suspense.value =
-      Math.max(
-        result.intensity.suspense.value,
-        0.65
-      );
+  if (genres.has("thriller")) {
+    intensity.suspense = boostFeature(
+      intensity.suspense,
+      0.35,
+      "genre:thriller"
+    );
   }
 
-  if (
-    genreText.includes("drama")
-  ) {
-    result.emotional.emotional.value =
-      Math.max(
-        result.emotional.emotional.value,
-        0.45
-      );
+  if (genres.has("drama")) {
+    intensity.emotional = boostFeature(
+      intensity.emotional,
+      0.25,
+      "genre:drama"
+    );
   }
 
-  if (
-    genreText.includes("science fiction")
-  ) {
-    result.narrative.high_concept.value =
-      Math.max(
-        result.narrative.high_concept.value,
-        0.45
-      );
+  if (genres.has("science fiction")) {
+    narrative.high_concept = boostFeature(
+      narrative.high_concept,
+      0.25,
+      "genre:science fiction"
+    );
   }
 
-  if (
-    genreText.includes("animation")
-  ) {
-    result.style.visually_stylized.value =
-      Math.max(
-        result.style.visually_stylized.value,
-        0.45
-      );
-  }
+  return {
+    tone,
+    mood,
+    narrative,
+    style,
+    emotional,
+    psychological,
+    horror,
+    intensity,
+  };
+}
 
-  return result;
+function boostFeature(
+  feature: FeatureValue,
+  boost: number,
+  evidence: string
+): FeatureValue {
+  return createFeature(
+    Math.max(feature.value, boost),
+    [...feature.evidence, evidence]
+  );
 }

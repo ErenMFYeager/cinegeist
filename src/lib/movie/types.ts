@@ -45,10 +45,18 @@ export type FeatureValue = {
 
 export type MovieFeatures = {
   tone: Record<string, FeatureValue>;
+
   mood: Record<string, FeatureValue>;
+
   narrative: Record<string, FeatureValue>;
+
   style: Record<string, FeatureValue>;
+
   emotional: Record<string, FeatureValue>;
+
+  psychological: Record<string, FeatureValue>;
+
+  horror: Record<string, FeatureValue>;
 
   intensity: {
     violence: FeatureValue;
