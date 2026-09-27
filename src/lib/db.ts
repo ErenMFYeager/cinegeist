@@ -8,7 +8,10 @@ if (!fs.existsSync(dataDirectory)) {
   fs.mkdirSync(dataDirectory, { recursive: true });
 }
 
-const databasePath = path.join(dataDirectory, "cinegeist.db");
+const databasePath = path.join(
+  dataDirectory,
+  "cinegeist.db"
+);
 
 const db = new Database(databasePath);
 
@@ -33,6 +36,16 @@ db.exec(`
       REFERENCES movies(tmdb_id)
       ON DELETE CASCADE
   );
+
+  CREATE TABLE IF NOT EXISTS movie_features (
+    tmdb_id INTEGER PRIMARY KEY,
+    features_json TEXT NOT NULL,
+    generated_at INTEGER NOT NULL,
+
+    FOREIGN KEY (tmdb_id)
+      REFERENCES movies(tmdb_id)
+      ON DELETE CASCADE
+  );
 `);
 
 export type StoredMovie = {
@@ -49,7 +62,15 @@ export type StoredRating = {
   rated_at: number;
 };
 
-export function getMovie(tmdbId: number): StoredMovie | undefined {
+export type StoredMovieFeatures = {
+  tmdb_id: number;
+  features_json: string;
+  generated_at: number;
+};
+
+export function getMovie(
+  tmdbId: number
+): StoredMovie | undefined {
   return db
     .prepare(
       `
@@ -84,6 +105,7 @@ export function saveMovie(
         fetched_at
       )
       VALUES (?, ?, ?, ?, ?)
+
       ON CONFLICT(tmdb_id)
       DO UPDATE SET
         title = excluded.title,
@@ -112,12 +134,17 @@ export function saveRating(
         rated_at
       )
       VALUES (?, ?, ?)
+
       ON CONFLICT(tmdb_id)
       DO UPDATE SET
         rating = excluded.rating,
         rated_at = excluded.rated_at
     `
-  ).run(tmdbId, rating, Date.now());
+  ).run(
+    tmdbId,
+    rating,
+    Date.now()
+  );
 }
 
 export function getRating(
@@ -187,6 +214,65 @@ export function getUnratedMovies(): StoredMovie[] {
       `
     )
     .all() as StoredMovie[];
+}
+
+export function saveMovieFeatures(
+  tmdbId: number,
+  features: unknown
+) {
+  db.prepare(
+    `
+      INSERT INTO movie_features (
+        tmdb_id,
+        features_json,
+        generated_at
+      )
+      VALUES (?, ?, ?)
+
+      ON CONFLICT(tmdb_id)
+      DO UPDATE SET
+        features_json = excluded.features_json,
+        generated_at = excluded.generated_at
+    `
+  ).run(
+    tmdbId,
+    JSON.stringify(features),
+    Date.now()
+  );
+}
+
+export function getMovieFeatures(
+  tmdbId: number
+): StoredMovieFeatures | undefined {
+  return db
+    .prepare(
+      `
+        SELECT
+          tmdb_id,
+          features_json,
+          generated_at
+        FROM movie_features
+        WHERE tmdb_id = ?
+      `
+    )
+    .get(tmdbId) as
+    | StoredMovieFeatures
+    | undefined;
+}
+
+export function getAllMovieFeatures(): StoredMovieFeatures[] {
+  return db
+    .prepare(
+      `
+        SELECT
+          tmdb_id,
+          features_json,
+          generated_at
+        FROM movie_features
+        ORDER BY tmdb_id ASC
+      `
+    )
+    .all() as StoredMovieFeatures[];
 }
 
 export default db;

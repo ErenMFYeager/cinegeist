@@ -38,16 +38,22 @@ export type CinegeistMovie = {
   voteCount: number;
 };
 
+export type FeatureValue = {
+  value: number;
+  evidence: string[];
+};
+
 export type MovieFeatures = {
-  themes: string[];
-  tone: string[];
-  style: string[];
-  narrative: string[];
+  tone: Record<string, FeatureValue>;
+  mood: Record<string, FeatureValue>;
+  narrative: Record<string, FeatureValue>;
+  style: Record<string, FeatureValue>;
+  emotional: Record<string, FeatureValue>;
 
   intensity: {
-    violence: number;
-    suspense: number;
-    emotional: number;
-    psychological: number;
+    violence: FeatureValue;
+    suspense: FeatureValue;
+    emotional: FeatureValue;
+    psychological: FeatureValue;
   };
 };
